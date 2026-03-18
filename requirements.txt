@@ -1,0 +1,7 @@
+Flask
+Werkzeug
+python-dotenv
+requests
+groq
+gunicorn
+psycopg2-binary

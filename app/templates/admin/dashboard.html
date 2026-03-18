@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard | Ramskon{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <h1>Admin Dashboard</h1>
+        <p class="muted">Welcome, {{ session.get("full_name") }}.</p>
+    </div>
+</section>
+
+<section class="grid-4">
+    <div class="dash-card stat-card">
+        <h3>Total Users</h3>
+        <p class="big-stat">{{ total_users }}</p>
+    </div>
+
+    <div class="dash-card stat-card">
+        <h3>Total Courses</h3>
+        <p class="big-stat">{{ total_courses }}</p>
+    </div>
+
+    <div class="dash-card stat-card">
+        <h3>Pending Requests</h3>
+        <p class="big-stat">{{ pending_requests }}</p>
+    </div>
+
+    <div class="dash-card stat-card">
+        <h3>Generated Days</h3>
+        <p class="big-stat">{{ total_days }}</p>
+    </div>
+</section>
+{% endblock %}

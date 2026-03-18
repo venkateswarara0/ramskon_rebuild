@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Course Requests | Ramskon{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <h1>Course Requests</h1>
+        <p class="muted">Approve or reject access for requested courses.</p>
+    </div>
+</section>
+
+<section class="dash-card">
+    {% if requests_data %}
+        <div class="table-wrap">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Course</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in requests_data %}
+                    <tr>
+                        <td>{{ row.full_name }}</td>
+                        <td>{{ row.email }}</td>
+                        <td>{{ row.title }}</td>
+                        <td>{{ row.status }}</td>
+                        <td>
+                            {% if row.status == 'pending' %}
+                            <div class="action-row">
+                                <form method="POST" action="{{ url_for('update_request_status', request_id=row.id, action='approve') }}">
+                                    <button type="submit" class="btn btn-primary">Approve</button>
+                                </form>
+                                <form method="POST" action="{{ url_for('update_request_status', request_id=row.id, action='reject') }}">
+                                    <button type="submit" class="btn btn-danger">Reject</button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <span class="status-text">{{ row.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="muted">No requests yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.title }} | Ramskon{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <h1>{{ course.title }}</h1>
+        <p class="muted">{{ course.description }}</p>
+        <p class="muted">
+            Showing {{ preferred_language|title }} videos for each unlocked topic.
+        </p>
+    </div>
+</section>
+
+{% if days %}
+<section class="course-days-grid">
+    {% for day in days %}
+    <div class="day-card {% if day.day_number > unlocked_day and not day.is_completed %}locked-card{% endif %}">
+        <div class="day-top">
+            <span class="day-badge">Day {{ day.day_number }}</span>
+
+            {% if day.is_completed %}
+                <span class="status-badge success-badge">Completed</span>
+            {% elif day.day_number == unlocked_day %}
+                <span class="status-badge open-badge">Unlocked</span>
+            {% else %}
+                <span class="status-badge locked-badge">Locked</span>
+            {% endif %}
+        </div>
+
+        <h3>{{ day.topic_title }}</h3>
+
+        {% if day.day_number <= unlocked_day or day.is_completed %}
+            <div class="topic-content-box">
+                <h4>Topic Content</h4>
+                <p>{{ day.topic_content }}</p>
+            </div>
+
+            <div class="assignment-box">
+                <h4>Assignment</h4>
+                <p>{{ day.assignment_text }}</p>
+            </div>
+
+            <div class="video-section">
+                <h4>Learning Videos</h4>
+
+                {% if day.videos %}
+                    <div class="video-grid">
+                        {% for video in day.videos %}
+                        <div class="video-card">
+                            <iframe
+                                src="{{ video.embed_url }}"
+                                title="{{ video.title }}"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen>
+                            </iframe>
+                            <h5>{{ video.title }}</h5>
+                            <p>{{ video.channel }}</p>
+                            <a href="{{ video.watch_url }}" target="_blank" class="btn btn-outline">Watch on YouTube</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="muted">Embedded videos are not available right now. Use these search links:</p>
+                    <div class="hero-actions">
+                        <a href="{{ day.english_search_url }}" target="_blank" class="btn btn-outline">Open English YouTube Results</a>
+                        <a href="{{ day.telugu_search_url }}" target="_blank" class="btn btn-outline">Open Telugu YouTube Results</a>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if day.is_completed %}
+                <div class="submission-proof">
+                    <h4>Your Submission</h4>
+
+                    {% if day.submission_text %}
+                        <p>{{ day.submission_text }}</p>
+                    {% endif %}
+
+                    {% if day.file_name and day.file_path %}
+                        <a href="{{ url_for('static', filename=day.file_path) }}" target="_blank" class="btn btn-outline">
+                            Open {{ day.file_name }}
+                        </a>
+                    {% endif %}
+
+                    {% if day.admin_review_status %}
+                        <p class="small-text">Review Status: {{ day.admin_review_status|replace("_", " ")|title }}</p>
+                    {% endif %}
+
+                    {% if day.admin_review_note %}
+                        <p class="small-text">Admin Note: {{ day.admin_review_note }}</p>
+                    {% endif %}
+                </div>
+            {% elif day.day_number == unlocked_day %}
+                <form method="POST"
+                      enctype="multipart/form-data"
+                      action="{{ url_for('submit_assignment', course_id=course.id, day_number=day.day_number) }}"
+                      class="auth-form top-gap">
+                    <textarea name="submission_text" rows="4" placeholder="Write what you completed for Day {{ day.day_number }}"></textarea>
+                    <input type="file" name="submission_file" accept=".pdf,.jpg,.jpeg,.png,.mp4,.mp3,.doc,.docx,.txt,.zip">
+                    <button type="submit" class="btn btn-primary full-width">Submit Day {{ day.day_number }}</button>
+                </form>
+            {% endif %}
+
+        {% else %}
+            <p class="muted">This day is locked. Complete the previous day first.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</section>
+{% else %}
+<section class="dash-card">
+    <p class="muted">No day-wise plan available yet.</p>
+</section>
+{% endif %}
+{% endblock %}

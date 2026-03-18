@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Assignment Submissions | Ramskon{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <h1>Assignment Submissions</h1>
+        <p class="muted">Review user submissions and update review status.</p>
+    </div>
+</section>
+
+{% if submissions %}
+    <div class="submission-grid">
+        {% for submission in submissions %}
+        <div class="dash-card">
+            <h3>{{ submission.course_title }} - Day {{ submission.day_number }}</h3>
+            <p><strong>User:</strong> {{ submission.full_name }}</p>
+            <p><strong>Email:</strong> {{ submission.email }}</p>
+            <p><strong>Submitted:</strong> {{ submission.submitted_at }}</p>
+
+            {% if submission.submission_text %}
+                <div class="assignment-box">
+                    <h4>Submission Text</h4>
+                    <p>{{ submission.submission_text }}</p>
+                </div>
+            {% endif %}
+
+            {% if submission.file_name and submission.file_path %}
+                <div class="assignment-box">
+                    <h4>Attached File</h4>
+                    <a href="{{ url_for('static', filename=submission.file_path) }}" target="_blank" class="btn btn-outline">
+                        Open {{ submission.file_name }}
+                    </a>
+                </div>
+            {% endif %}
+
+            <div class="assignment-box">
+                <h4>Current Review</h4>
+                <p>Status: {{ submission.admin_review_status }}</p>
+                {% if submission.admin_review_note %}
+                    <p>Note: {{ submission.admin_review_note }}</p>
+                {% endif %}
+            </div>
+
+            <form method="POST" action="{{ url_for('admin_review_submission', submission_id=submission.id) }}" class="auth-form">
+                <select name="admin_review_status" required>
+                    <option value="pending" {% if submission.admin_review_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="approved" {% if submission.admin_review_status == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="needs_changes" {% if submission.admin_review_status == 'needs_changes' %}selected{% endif %}>Needs Changes</option>
+                </select>
+                <textarea name="admin_review_note" rows="3" placeholder="Write admin review note">{{ submission.admin_review_note or '' }}</textarea>
+                <button type="submit" class="btn btn-primary full-width">Save Review</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+<section class="dash-card">
+    <p class="muted">No submissions yet.</p>
+</section>
+{% endif %}
+{% endblock %}

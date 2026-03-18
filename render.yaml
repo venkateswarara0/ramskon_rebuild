@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: ramskon
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.11
+
+databases:
+  - name: ramskon-db
+    databaseName: ramskon_db
+    user: ramskon_user

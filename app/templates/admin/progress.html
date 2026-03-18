@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}User Progress | Ramskon{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <h1>User Progress</h1>
+        <p class="muted">Track every user's approved course progress.</p>
+    </div>
+</section>
+
+<section class="dash-card">
+    {% if progress_rows %}
+        <div class="table-wrap">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Course</th>
+                        <th>Completed</th>
+                        <th>Remaining</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in progress_rows %}
+                    <tr>
+                        <td>{{ row.full_name }}</td>
+                        <td>{{ row.email }}</td>
+                        <td>{{ row.course_title }}</td>
+                        <td>{{ row.completed_days }}/30</td>
+                        <td>{{ row.remaining_days }}</td>
+                        <td>{{ row.progress_percent }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="muted">No user progress yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

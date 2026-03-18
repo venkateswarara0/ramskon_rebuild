@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Courses | Ramskon{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <h1>All Courses</h1>
+        <p class="muted">Request the course you want to join.</p>
+    </div>
+</section>
+
+<section class="dash-card">
+    <div class="course-list">
+        {% for course in courses %}
+        <div class="course-card">
+            <h4>{{ course.title }}</h4>
+            <p>{{ course.description }}</p>
+
+            <div class="course-meta">
+                <span>{{ course.category }}</span>
+                <span>{{ course.duration_days }} Days</span>
+            </div>
+
+            {% if course.status == 'approved' %}
+                <a href="{{ url_for('user_course_detail', course_id=course.id) }}" class="btn btn-primary">Open Course</a>
+            {% elif course.status == 'pending' %}
+                <button class="btn btn-warning" disabled>Request Pending</button>
+            {% elif course.status == 'rejected' %}
+                <button class="btn btn-danger" disabled>Rejected</button>
+            {% else %}
+                <form method="POST" action="{{ url_for('request_course', course_id=course.id) }}">
+                    <button type="submit" class="btn btn-primary">Request Course</button>
+                </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}My Progress | Ramskon{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <h1>My Progress</h1>
+        <p class="muted">Track your course completion clearly.</p>
+    </div>
+</section>
+
+{% if progress_rows %}
+    <div class="course-list">
+        {% for row in progress_rows %}
+        <div class="course-card">
+            <h4>{{ row.course_title }}</h4>
+            <p>{{ row.category }}</p>
+
+            <div class="course-meta">
+                <span>Completed {{ row.completed_days }}/30</span>
+                <span>Remaining {{ row.remaining_days }}</span>
+                <span>{{ row.progress_percent }}%</span>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ row.progress_percent }}%;"></div>
+            </div>
+
+            <p class="small-text">You are progressing through this course day by day.</p>
+            <a href="{{ url_for('user_course_detail', course_id=row.course_id) }}" class="btn btn-primary">Open Course</a>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+<section class="dash-card">
+    <p class="muted">No approved course progress yet.</p>
+</section>
+{% endif %}
+{% endblock %}

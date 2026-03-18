@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Courses | Ramskon{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <h1>Manage Courses</h1>
+        <p class="muted">Create and manage all platform courses.</p>
+    </div>
+</section>
+
+<section class="course-layout">
+    <div class="dash-card">
+        <h3>Create Course</h3>
+        <form method="POST" class="auth-form">
+            <input type="text" name="title" placeholder="Course title" required>
+            <textarea name="description" placeholder="Course description" rows="5" required></textarea>
+            <input type="text" name="duration" placeholder="Duration (example: 30 days)" required>
+            <input type="text" name="level" placeholder="Level (Beginner / Intermediate / Advanced)" required>
+            <button type="submit" class="btn btn-primary full-width">Create Course</button>
+        </form>
+    </div>
+
+    <div class="dash-card">
+        <h3>All Courses</h3>
+
+        {% if courses %}
+            <div class="course-list">
+                {% for course in courses %}
+                    <div class="course-card">
+                        <h4>{{ course.title }}</h4>
+                        <p>{{ course.description }}</p>
+                        <div class="course-meta">
+                            <span>Duration: {{ course.duration }}</span>
+                            <span>Level: {{ course.level }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="muted">No courses created yet.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
