@@ -865,7 +865,7 @@ def user_has_approved_course(user_id, course_id):
     approved = cursor.fetchone()
     conn.close()
     return approved is not None
-
+create_admin_if_not_exists()
 
 def get_unlocked_day(user_id, course_id):
     conn = get_connection()
