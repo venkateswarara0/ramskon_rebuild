@@ -883,6 +883,9 @@ def get_unlocked_day(user_id, course_id):
     completed_days = row.completed_days if row else 0
     return completed_days + 1
 
+@app.route("/healthz")
+def healthz():
+    return {"status": "ok"}, 200
 
 @app.route("/")
 def home():
