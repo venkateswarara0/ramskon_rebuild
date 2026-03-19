@@ -109,53 +109,61 @@ def get_groq_client():
     return None
 
 
-def generate_day_content_with_groq(course_title, course_description, phase_title, day_number):
+	
+
+
+def generate_course_plan_with_groq(course_title, course_description):
     client = get_groq_client()
 
-    fallback_title = f"Day {day_number}: {phase_title} in {course_title}"
-    fallback_content = (
-        f"What is this topic?\n"
-        f"{phase_title} is an important part of {course_title}. Today you should understand what it means, "
-        f"why it matters, and how it is used in practical work.\n\n"
-        f"Why is it important?\n"
-        f"This topic supports the overall goal of the course: {course_description}\n\n"
-        f"Practical understanding:\n"
-        f"Do not study it only as theory. Think about how this concept is applied in real client work, projects, "
-        f"business workflow, service delivery, or portfolio building.\n\n"
-        f"Real-world example:\n"
-        f"Imagine using this concept in an actual {course_title} situation. Your focus today is to understand the logic, "
-        f"execution flow, and outcome.\n\n"
-        f"Day goal:\n"
-        f"By the end of Day {day_number}, you should be able to explain this topic in your own words and apply it practically."
-    )
-    fallback_assignment = (
-        f"Day {day_number} Assignment:\n"
-        f"1. Explain what '{phase_title}' means in {course_title}.\n"
-        f"2. Write why it is important.\n"
-        f"3. Give one real example.\n"
-        f"4. Create a small proof of work, notes, checklist, mini-plan, or demo related to this topic.\n"
-        f"5. Submit your explanation and practical output."
-    )
-
-    if client is None:
-        return {
+    fallback_plan = []
+    for day_number, phase_title in enumerate(DAY_PHASES, start=1):
+        fallback_plan.append({
             "day_number": day_number,
-            "topic_title": fallback_title,
-            "topic_content": fallback_content,
-            "assignment_text": fallback_assignment,
+            "topic_title": f"Day {day_number}: {phase_title} in {course_title}",
+            "topic_content": (
+                f"What is this topic?\n"
+                f"{phase_title} is an important part of {course_title}. Today you should understand what it means, "
+                f"why it matters, and how it is used in practical work.\n\n"
+                f"Why is it important?\n"
+                f"This topic supports the overall goal of the course: {course_description}\n\n"
+                f"Practical understanding:\n"
+                f"Do not study it only as theory. Think about how this concept is applied in real client work, "
+                f"projects, business workflow, service delivery, or portfolio building.\n\n"
+                f"Real-world example:\n"
+                f"Imagine using this concept in an actual {course_title} situation. Your focus today is to understand "
+                f"the logic, execution flow, and outcome.\n\n"
+                f"Day goal:\n"
+                f"By the end of Day {day_number}, you should be able to explain this topic in your own words and apply it practically."
+            ),
+            "assignment_text": (
+                f"Day {day_number} Assignment:\n"
+                f"1. Explain what '{phase_title}' means in {course_title}.\n"
+                f"2. Write why it is important.\n"
+                f"3. Give one real example.\n"
+                f"4. Create a small proof of work, notes, checklist, mini-plan, or demo related to this topic.\n"
+                f"5. Submit your explanation and practical output."
+            ),
             "youtube_query_en": f"{course_title} {phase_title} tutorial english",
             "youtube_query_te": f"{course_title} {phase_title} tutorial telugu"
-        }
+        })
+
+    if client is None:
+        return fallback_plan
+
+    phases_text = "\n".join([f"Day {i+1}: {phase}" for i, phase in enumerate(DAY_PHASES)])
 
     prompt = f"""
-You are building a premium day-wise learning roadmap.
+You are creating a premium 30-day course roadmap.
 
 Course Title: {course_title}
 Course Description: {course_description}
-Day Number: {day_number}
-Phase Title: {phase_title}
 
-Return ONLY valid JSON object with these keys:
+Use these exact 30 day phases in order:
+{phases_text}
+
+Return ONLY valid JSON array with exactly 30 objects.
+
+Each object must have:
 day_number
 topic_title
 topic_content
@@ -164,60 +172,49 @@ youtube_query_en
 youtube_query_te
 
 Rules:
-- topic_title must be unique and specific for this day
-- topic_content must be beginner-friendly and practical
-- explain:
+- Keep all 30 days unique
+- topic_title must be specific and not generic
+- topic_content must clearly explain:
   1. what it is
   2. why it matters
-  3. real-world example
-  4. how to use it
-- assignment_text must be practical and specific to this day
-- youtube_query_en and youtube_query_te must be good tutorial search phrases
+  3. one practical understanding
+  4. one real-world example
+- assignment_text must be practical for that day
+- youtube_query_en must be a good English tutorial search
+- youtube_query_te must be a good Telugu tutorial search
 - no markdown
-- no extra text outside JSON
+- no extra text
 """
 
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            temperature=0.7,
+            temperature=0.5,
             messages=[{"role": "user", "content": prompt}]
         )
+
         content = response.choices[0].message.content.strip()
-        parsed = json.loads(content)
+        plan = json.loads(content)
 
-        return {
-            "day_number": int(parsed.get("day_number", day_number)),
-            "topic_title": parsed.get("topic_title", fallback_title).strip(),
-            "topic_content": parsed.get("topic_content", fallback_content).strip(),
-            "assignment_text": parsed.get("assignment_text", fallback_assignment).strip(),
-            "youtube_query_en": parsed.get("youtube_query_en", f"{course_title} {phase_title} tutorial english").strip(),
-            "youtube_query_te": parsed.get("youtube_query_te", f"{course_title} {phase_title} tutorial telugu").strip()
-        }
+        if not isinstance(plan, list) or len(plan) != 30:
+            return fallback_plan
+
+        normalized = []
+        for i, item in enumerate(plan, start=1):
+            normalized.append({
+                "day_number": int(item.get("day_number", i)),
+                "topic_title": str(item.get("topic_title", f"Day {i}: {DAY_PHASES[i-1]} in {course_title}")).strip(),
+                "topic_content": str(item.get("topic_content", fallback_plan[i-1]["topic_content"])).strip(),
+                "assignment_text": str(item.get("assignment_text", fallback_plan[i-1]["assignment_text"])).strip(),
+                "youtube_query_en": str(item.get("youtube_query_en", fallback_plan[i-1]["youtube_query_en"])).strip(),
+                "youtube_query_te": str(item.get("youtube_query_te", fallback_plan[i-1]["youtube_query_te"])).strip(),
+            })
+
+        return normalized
+
     except Exception as e:
-        print("Groq day generation error:", str(e))
-        return {
-            "day_number": day_number,
-            "topic_title": fallback_title,
-            "topic_content": fallback_content,
-            "assignment_text": fallback_assignment,
-            "youtube_query_en": f"{course_title} {phase_title} tutorial english",
-            "youtube_query_te": f"{course_title} {phase_title} tutorial telugu"
-        }
-
-
-def generate_course_plan_with_groq(course_title, course_description):
-    plan = []
-    for day_number, phase_title in enumerate(DAY_PHASES, start=1):
-        plan.append(
-            generate_day_content_with_groq(
-                course_title=course_title,
-                course_description=course_description,
-                phase_title=phase_title,
-                day_number=day_number
-            )
-        )
-    return plan
+        print("Groq bulk generation error:", str(e))
+        return fallback_plan
 
 
 def fetch_youtube_videos(course_title, topic_title, preferred_language="english", max_results=3):
@@ -659,11 +656,6 @@ def admin_generate_days():
 
             plan = generate_course_plan_with_groq(course.title, course.description)
 
-            if not plan or len(plan) != 30:
-                conn.close()
-                flash("Failed to generate a valid 30-day plan.", "danger")
-                return redirect(url_for("admin_generate_days"))
-
             for item in plan:
                 cursor.execute(
                     """
@@ -677,8 +669,8 @@ def admin_generate_days():
                         item["topic_title"],
                         item["topic_content"],
                         item["assignment_text"],
-                        item.get("youtube_query_en", ""),
-                        item.get("youtube_query_te", "")
+                        item["youtube_query_en"],
+                        item["youtube_query_te"]
                     )
                 )
 
@@ -697,9 +689,10 @@ def admin_generate_days():
         print("ADMIN_GENERATE_DAYS_ERROR:", str(e))
         flash(f"Generate days failed: {str(e)}", "danger")
         return redirect(url_for("admin_generate_days"))
+        
+	conn.close()
+        return render_template("admin/generate_days.html", courses=courses)
 
-    conn.close()
-    return render_template("admin/generate_days.html", courses=courses)
 
 
 @app.route("/admin/progress")
