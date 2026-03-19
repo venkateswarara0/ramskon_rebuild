@@ -629,47 +629,73 @@ def admin_generate_days():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, title, description FROM courses ORDER BY title ASC")
-    courses = cursor.fetchall()
+    try:
+        cursor.execute("SELECT id, title, description FROM courses ORDER BY title ASC")
+        courses = cursor.fetchall()
 
-    if request.method == "POST":
-        course_id = int(request.form.get("course_id"))
+        if request.method == "POST":
+            course_id_raw = request.form.get("course_id", "").strip()
 
-        cursor.execute("SELECT id, title, description FROM courses WHERE id = %s", (course_id,))
-        course = cursor.fetchone()
+            if not course_id_raw.isdigit():
+                flash("Invalid course selection.", "danger")
+                conn.close()
+                return redirect(url_for("admin_generate_days"))
 
-        if not course:
+            course_id = int(course_id_raw)
+
+            cursor.execute(
+                "SELECT id, title, description FROM courses WHERE id = %s",
+                (course_id,)
+            )
+            course = cursor.fetchone()
+
+            if not course:
+                conn.close()
+                flash("Course not found.", "danger")
+                return redirect(url_for("admin_generate_days"))
+
+            cursor.execute("DELETE FROM course_days WHERE course_id = %s", (course_id,))
+            conn.commit()
+
+            plan = generate_course_plan_with_groq(course.title, course.description)
+
+            if not plan or len(plan) != 30:
+                conn.close()
+                flash("Failed to generate a valid 30-day plan.", "danger")
+                return redirect(url_for("admin_generate_days"))
+
+            for item in plan:
+                cursor.execute(
+                    """
+                    INSERT INTO course_days
+                    (course_id, day_number, topic_title, topic_content, assignment_text, youtube_query_en, youtube_query_te)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        course_id,
+                        item["day_number"],
+                        item["topic_title"],
+                        item["topic_content"],
+                        item["assignment_text"],
+                        item.get("youtube_query_en", ""),
+                        item.get("youtube_query_te", "")
+                    )
+                )
+
+            conn.commit()
             conn.close()
-            flash("Course not found.", "danger")
+
+            flash("30-day AI plan generated successfully.", "success")
             return redirect(url_for("admin_generate_days"))
 
-        cursor.execute("DELETE FROM course_days WHERE course_id = %s", (course_id,))
-        conn.commit()
-
-        plan = generate_course_plan_with_groq(course.title, course.description)
-
-        for item in plan:
-            cursor.execute(
-                """
-                INSERT INTO course_days
-                (course_id, day_number, topic_title, topic_content, assignment_text, youtube_query_en, youtube_query_te)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """,
-                (
-                    course_id,
-                    item["day_number"],
-                    item["topic_title"],
-                    item["topic_content"],
-                    item["assignment_text"],
-                    item["youtube_query_en"],
-                    item["youtube_query_te"]
-                )
-            )
-
-        conn.commit()
         conn.close()
+        return render_template("admin/generate_days.html", courses=courses)
 
-        flash("30-day AI plan generated successfully with unique day-wise content.", "success")
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        print("ADMIN_GENERATE_DAYS_ERROR:", str(e))
+        flash(f"Generate days failed: {str(e)}", "danger")
         return redirect(url_for("admin_generate_days"))
 
     conn.close()
