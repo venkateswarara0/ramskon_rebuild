@@ -1,10 +1,10 @@
 import os
 import json
-import requests
 import urllib.parse
 from uuid import uuid4
 from functools import wraps
 
+import requests
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -82,21 +82,21 @@ DAY_PHASES = [
     "Scaling Methods",
     "Brand Building",
     "System Building",
-    "Final Capstone"
+    "Final Capstone",
 ]
 
 
-def allowed_file(filename):
+def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def build_youtube_search_link(query):
+def build_youtube_search_link(query: str) -> str:
     if not query:
         return ""
     return "https://www.youtube.com/results?search_query=" + urllib.parse.quote_plus(query)
 
 
-def clean_topic_for_youtube(text):
+def clean_topic_for_youtube(text: str) -> str:
     if not text:
         return ""
     return " ".join(text.replace("—", " ").replace(":", " ").split()).strip()
@@ -109,10 +109,75 @@ def get_groq_client():
     return None
 
 
-	
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user_id" not in session:
+            flash("Please login first.", "warning")
+            return redirect(url_for("login"))
+        if session.get("role") != "admin":
+            flash("Access denied.", "danger")
+            return redirect(url_for("user_dashboard"))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
-def generate_course_plan_with_groq(course_title, course_description):
+def user_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user_id" not in session:
+            flash("Please login first.", "warning")
+            return redirect(url_for("login"))
+        if session.get("role") != "user":
+            flash("Access denied.", "danger")
+            return redirect(url_for("admin_dashboard"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def create_admin_if_not_exists():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id FROM users WHERE email = %s", ("admin@ramskon.com",))
+    admin = cursor.fetchone()
+
+    if not admin:
+        password_hash = generate_password_hash("admin123")
+        cursor.execute(
+            """
+            INSERT INTO users (full_name, email, password_hash, role, preferred_language)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            ("Admin", "admin@ramskon.com", password_hash, "admin", "english")
+        )
+        conn.commit()
+
+    conn.close()
+
+
+def seed_courses():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    for title, description, category in COURSES_DATA:
+        cursor.execute("SELECT id FROM courses WHERE title = %s", (title,))
+        existing = cursor.fetchone()
+
+        if not existing:
+            cursor.execute(
+                """
+                INSERT INTO courses (title, description, duration_days, category)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (title, description, 30, category)
+            )
+
+    conn.commit()
+    conn.close()
+
+
+def generate_course_plan_with_groq(course_title: str, course_description: str):
     client = get_groq_client()
 
     fallback_plan = []
@@ -217,7 +282,7 @@ Rules:
         return fallback_plan
 
 
-def fetch_youtube_videos(course_title, topic_title, preferred_language="english", max_results=3):
+def fetch_youtube_videos(course_title: str, topic_title: str, preferred_language: str = "english", max_results: int = 3):
     api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
     if not api_key:
         return []
@@ -299,75 +364,7 @@ def fetch_youtube_videos(course_title, topic_title, preferred_language="english"
     return []
 
 
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "user_id" not in session:
-            flash("Please login first.", "warning")
-            return redirect(url_for("login"))
-        if session.get("role") != "admin":
-            flash("Access denied.", "danger")
-            return redirect(url_for("user_dashboard"))
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-def user_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "user_id" not in session:
-            flash("Please login first.", "warning")
-            return redirect(url_for("login"))
-        if session.get("role") != "user":
-            flash("Access denied.", "danger")
-            return redirect(url_for("admin_dashboard"))
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-def create_admin_if_not_exists():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT id FROM users WHERE email = %s", ("admin@ramskon.com",))
-    admin = cursor.fetchone()
-
-    if not admin:
-        password_hash = generate_password_hash("admin123")
-        cursor.execute(
-            """
-            INSERT INTO users (full_name, email, password_hash, role, preferred_language)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            ("Admin", "admin@ramskon.com", password_hash, "admin", "english")
-        )
-        conn.commit()
-
-    conn.close()
-
-
-def seed_courses():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    for title, description, category in COURSES_DATA:
-        cursor.execute("SELECT id FROM courses WHERE title = %s", (title,))
-        existing = cursor.fetchone()
-
-        if not existing:
-            cursor.execute(
-                """
-                INSERT INTO courses (title, description, duration_days, category)
-                VALUES (%s, %s, %s, %s)
-                """,
-                (title, description, 30, category)
-            )
-
-    conn.commit()
-    conn.close()
-
-
-def user_has_approved_course(user_id, course_id):
+def user_has_approved_course(user_id: int, course_id: int) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -383,7 +380,7 @@ def user_has_approved_course(user_id, course_id):
     return approved is not None
 
 
-def get_unlocked_day(user_id, course_id):
+def get_unlocked_day(user_id: int, course_id: int) -> int:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -689,10 +686,6 @@ def admin_generate_days():
         print("ADMIN_GENERATE_DAYS_ERROR:", str(e))
         flash(f"Generate days failed: {str(e)}", "danger")
         return redirect(url_for("admin_generate_days"))
-        
-	conn.close()
-        return render_template("admin/generate_days.html", courses=courses)
-
 
 
 @app.route("/admin/progress")
